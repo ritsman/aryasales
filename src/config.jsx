@@ -7,4 +7,4 @@ const config = {
 export default config;
 
 //https://s1.simranwebsoft.com/aysales
-//http://localhost:3020
+//http://localhost:3024
