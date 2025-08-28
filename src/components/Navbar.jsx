@@ -42,7 +42,7 @@ const Navbar = () => {
   }, []);
 
   return (
-    <nav className="bg-white shadow-md" style={{ width: '100%', position: 'fixed', top: 0, left: 0, zIndex: 10 }}>
+    <nav className="bg-white shadow-md" >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between py-4">
         {/* Logo or title can go here */}
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Loader2, Package, IndianRupee, Hash, Calendar, FileText, Settings, Layers, Boxes, Type, Image, X } from 'lucide-react';
 import config from "../config";
-export default function ProductForm() {
+export default function Product() {
   // Form state
   const [formData, setFormData] = useState({
     style_number: '',
@@ -347,7 +347,7 @@ export default function ProductForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8"style={{ width: '100%', position: 'fixed', top: 0, left: 0, zIndex: 10 }}>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white shadow-xl rounded-lg overflow-hidden">
           {/* Header */}
