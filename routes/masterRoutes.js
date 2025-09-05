@@ -14,6 +14,7 @@ router.get('/:id', productController.getProduct);
 //router.post('/', productController.createProduct);
 //router.post('/', upload.single('picture'), productController.createProduct);
 router.post('/', upload.upload, productController.createProduct);
+router.post('/products_stock/bulk/',productController.bulkInsertStock);//bulkInsertStock 
 router.put('/:id', productController.updateProduct);
 router.delete('/:id', productController.deleteProduct);
 
@@ -21,3 +22,4 @@ router.delete('/:id', productController.deleteProduct);
 router.get('/stats', productController.getProductStats);
 
 module.exports = router;
+

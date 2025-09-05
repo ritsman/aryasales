@@ -71,6 +71,22 @@ app.get('/debug/directory', (req, res) => {
     });
   }
 });
+const mongoose = require("mongoose");
+
+async function connectMongo() {
+  try {
+    await mongoose.connect("mongodb://127.0.0.1:27017/gems", {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log("✅ Connected to MongoDB");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error);
+    process.exit(1);
+  }
+}
+
+connectMongo();
 
 //app.listen(3025, () => console.log('Server running on port 3025'));
 app.listen(3025, () => {

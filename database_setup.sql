@@ -81,3 +81,36 @@ INSERT INTO item_boms (name, value, description) VALUES
 ('Custom BOM', 'custom_bom', 'Customized bill of materials'),
 ('Luxury BOM', 'luxury_bom', 'High-end luxury materials')
 ON CONFLICT (value) DO NOTHING;
+
+--Product Stock table
+CREATE TABLE IF NOT EXISTS products_stock (
+    stock_id SERIAL PRIMARY KEY,
+    product_id INT NOT NULL REFERENCES products_master(id) ON DELETE CASCADE,
+    size_label VARCHAR(50) NOT NULL,       -- e.g. "S", "M", "L" OR "1", "2", "3", "4"
+    
+    quantity INT NOT NULL CHECK (quantity >= 0), -- movement quantity
+    
+    movement_type VARCHAR(10) NOT NULL CHECK (movement_type IN ('CREDIT', 'DEBIT','INIT')),
+        -- CREDIT = stock received
+        -- DEBIT  = stock issued
+        -- INIT   = initial stock setup
+    
+    reference_no VARCHAR(100),             -- receipt no / issue no
+    movement_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+-- 1. Fast lookup of stock by product + size (most common query)
+CREATE INDEX idx_product_stock_product_size 
+    ON products_stock (product_id, size_label);
+
+-- 2. Fast filtering by product + date (for transaction history reports)
+CREATE INDEX idx_product_stock_product_date 
+    ON products_stock (product_id, movement_date);
+
+-- 3. Optional: if you frequently search by reference_no (receipt/issue numbers)
+CREATE INDEX idx_product_stock_reference 
+    ON products_stock (reference_no);
+-- 4. Optional: if you frequently filter by movement_type (CREDIT/DEBIT)
+CREATE INDEX idx_product_stock_movement_type 
+    ON products_stock (movement_type);
