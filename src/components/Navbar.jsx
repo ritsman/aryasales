@@ -10,7 +10,7 @@ const navLinks = [
   { name: "sales" },
   { name: "workorder" },
   { name: "material" },
-  { name: "inventory" },
+  { name: "inventory",path: "/inventory" },
   { name: "finance" },
   { name: "master",path: "/master" },
   { name: "shipment" },

@@ -11,6 +11,7 @@ import MasterIndex from "./pages/master-index";
 import Size1 from "./pages/Size/Size";
 import AddSize from "./pages/Size/AddSize";
 import Gallery from "./pages/gallery";
+import Inventory from "./pages/inventory";
 
 
 const router = createBrowserRouter([
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
       {
         path: "/gallery",
         element: <Gallery/>
+      },
+      {
+        path:"inventory",
+        element:<Inventory/>
       },
       {
         path: "/master",

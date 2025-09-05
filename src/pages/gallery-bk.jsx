@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Package, Tag, Shirt, Edit, Trash2, AlertCircle } from 'lucide-react';
+import { Package, Tag, Shirt } from 'lucide-react';
 import config from '../config';
-
 const Gallery = () => {
+  //const BASE_URL = 'http://192.168.29.132:3025';
   const BASE_URL = config.APIPOST_URL;
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
 
   useEffect(() => {
     fetchProducts();
@@ -18,7 +15,9 @@ const Gallery = () => {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${BASE_URL}/api/products`);
+      // Replace with your actual API endpoint
+      const response = await fetch('https://s1.simranwebsoft.com/ay2/api/products');
+      //const response = await fetch(`${BASE_URL}/api/products`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch products');
@@ -31,62 +30,6 @@ const Gallery = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleEdit = (product) => {
-    // You can implement this based on your routing setup
-    // For example, navigate to edit page or open edit modal
-    console.log('Edit product:', product);
-    // Example: navigate('/products/edit/' + product.id);
-    // Or open an edit modal
-    alert(`Edit functionality for ${product.style_name} - implement navigation or modal here`);
-  };
-
-  const handleDeleteClick = (product) => {
-    setProductToDelete(product);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!productToDelete) return;
-
-    try {
-      setDeleteLoading(productToDelete.id);
-      
-      const response = await fetch(`${BASE_URL}/api/products/${productToDelete.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to delete product');
-      }
-
-      // Remove product from local state
-      setProducts(prevProducts => 
-        prevProducts.filter(p => p.id !== productToDelete.id)
-      );
-
-      setShowDeleteModal(false);
-      setProductToDelete(null);
-      
-      // Optional: Show success message
-      alert('Product deleted successfully!');
-      
-    } catch (err) {
-      console.error('Delete error:', err);
-      alert(`Failed to delete product: ${err.message}`);
-    } finally {
-      setDeleteLoading(null);
-    }
-  };
-
-  const cancelDelete = () => {
-    setShowDeleteModal(false);
-    setProductToDelete(null);
   };
 
   const formatPrice = (price) => {
@@ -179,7 +122,7 @@ const Gallery = () => {
               <div className="relative h-48 sm:h-56 md:h-64 bg-gray-200 overflow-hidden rounded-t-xl">
                 {product.picture_url ? (
                   <img
-                    src={product.picture_url.startsWith('/') ? `${BASE_URL}${product.picture_url}` : `${BASE_URL}/${product.picture_url}`}
+                     src={product.picture_url.startsWith('/') ? `${BASE_URL}${product.picture_url}` : `${BASE_URL}/${product.picture_url}`}
                     alt={product.style_name}
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -210,8 +153,6 @@ const Gallery = () => {
                     {product.style_number}
                   </span>
                 </div>
-
-
               </div>
 
               {/* Product Info */}
@@ -264,85 +205,11 @@ const Gallery = () => {
                     <div>Process Group: <span className="font-medium">{product.process_group}</span></div>
                   )}
                 </div>
-
-                {/* Bottom Action Buttons (Alternative placement) */}
-                <div className="flex justify-between items-center mt-4 pt-3 border-t">
-                  <button
-                    onClick={() => handleEdit(product)}
-                    className="flex items-center space-x-1 text-blue-600 hover:text-blue-700 transition-colors text-sm font-medium"
-                  >
-                    <Edit className="w-4 h-4" />
-                    <span>Edit</span>
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(product)}
-                    disabled={deleteLoading === product.id}
-                    className="flex items-center space-x-1 text-red-600 hover:text-red-700 transition-colors text-sm font-medium disabled:opacity-50"
-                  >
-                    {deleteLoading === product.id ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-600"></div>
-                        <span>Deleting...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Trash2 className="w-4 h-4" />
-                        <span>Delete</span>
-                      </>
-                    )}
-                  </button>
-                </div>
               </div>
             </div>
           ))}
         </div>
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {showDeleteModal && productToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <div className="flex items-center mb-4">
-                <AlertCircle className="w-6 h-6 text-red-600 mr-3" />
-                <h3 className="text-lg font-semibold text-gray-900">Confirm Delete</h3>
-              </div>
-              
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete <strong>"{productToDelete.style_name}"</strong>? 
-                This action cannot be undone and will also delete the associated image file.
-              </p>
-              
-              <div className="flex justify-end space-x-3">
-                <button
-                  onClick={cancelDelete}
-                  disabled={deleteLoading}
-                  className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDelete}
-                  disabled={deleteLoading}
-                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center space-x-2"
-                >
-                  {deleteLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Deleting...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 className="w-4 h-4" />
-                      <span>Delete</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
