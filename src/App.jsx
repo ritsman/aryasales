@@ -12,6 +12,7 @@ import Size1 from "./pages/Size/Size";
 import AddSize from "./pages/Size/AddSize";
 import Gallery from "./pages/gallery";
 import Inventory from "./pages/inventory";
+import Barcode from "./pages/barcode";
 
 
 const router = createBrowserRouter([
@@ -31,6 +32,10 @@ const router = createBrowserRouter([
       {
         path:"inventory",
         element:<Inventory/>
+      },
+      {
+        path:"barcode",
+        element:<Barcode/>
       },
       {
         path: "/master",

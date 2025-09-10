@@ -11,7 +11,7 @@ const navLinks = [
   { name: "workorder" },
   { name: "material" },
   { name: "inventory",path: "/inventory" },
-  { name: "finance" },
+  { name: "barcode",path: "/barcode" },
   { name: "master",path: "/master" },
   { name: "shipment" },
 ];
