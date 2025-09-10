@@ -140,9 +140,123 @@ const Barcode = () => {
     setDropdownOpen(false);
   };
 
+function generateBarcodeSVG(barcodeValue, height = 40) {
+  // Must use createElementNS
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
 
+  JsBarcode(svg, barcodeValue, {
+    format: "CODE128",
+    displayValue: true,
+    fontSize: 10,
+    margin: 0,
+    width: 2,
+    height: height,
+  });
+
+  // ✅ Ensure only one xmlns attribute exists
+  if (svg.hasAttribute("xmlns")) {
+    svg.removeAttribute("xmlns");
+  }
+
+  return svg;
+}
+const generatePDFBarcode= async(product, sizeLabel, quantity)=>{
+  const barcodeValue = `${product.style_number}-${sizeLabel}-${product.mrp}`;
+  //alert('hi');
+  //const pdf = await new jsPDF({ orientation: "portrait", unit: "mm", format: [105, 297] });
+  const pdf = await new jsPDF({ orientation: "landscape", unit: "mm", format: [52, 146] });
+  //const svg = generateBarcodeSVG(barcodeValue)
+  const svg = generateBarcodeSVG("test123");
+//   const labelWidth = 104;  
+//   const labelHeight = 220; 
+//   let x = 0, y =0, col = 0;
+
+//   for (let i = 0; i < quantity; i++) {
+//     const paddingX = 2;
+//     const paddingY = 2;
+
+//     await pdf.svg(svg, {
+//   x: x + paddingX,
+//   y: y + paddingY,
+//   width: labelWidth - 4,
+//   height: 12,
+// });
+
+//     pdf.setFontSize(6);
+//     pdf.text(`Style: ${product.style_number}`, x + 2, y + 17);
+//     pdf.text(`Size: ${sizeLabel}`, x + 2, y + 20);
+//     pdf.text(`MRP: ₹${product.mrp}`, x + 20, y + 20);
+
+//     col++;
+//     x += labelWidth;
+
+//     if (col >= 3) {
+//       col = 0;
+//       x = 0;
+//       y += labelHeight;
+//     }
+
+//     if (y + labelHeight > 290) {
+//       pdf.addPage();
+//       x = 0;
+//       y = 0;
+//       col = 0;
+//     }
+//   }
+await pdf.svg(svg, { x: 0, y: 0, width:70, height: 30 });
+pdf.save("barcode.pdf"); 
+
+}
+const generatePDFBarcode2w3 = async (product, sizeLabel, quantity) => {
+  const pdf = await new jsPDF({ orientation: "portrait", unit: "mm", format: [105, 297] });
+
+  const labelWidth = 35;  
+  const labelHeight = 22; 
+
+  const barcodeValue = `${product.style_number}-${sizeLabel}-${product.mrp}`;
+  const barcodeSVG = generateBarcodeSVG(barcodeValue);
+
+  let x = 0, y = 0, col = 0;
+
+  for (let i = 0; i < quantity; i++) {
+    const paddingX = 2;
+    const paddingY = 2;
+
+    // D/raw vector SVG directly into PDF
+    await pdf.addSvgAsImage(
+      barcodeSVG,
+      x + paddingX,
+      y + paddingY,
+      labelWidth - 4,
+      12
+    );
+
+    pdf.setFontSize(6);
+    pdf.text(`Style: ${product.style_number}`, x + 2, y + 17);
+    pdf.text(`Size: ${sizeLabel}`, x + 2, y + 20);
+    pdf.text(`MRP: ₹${product.mrp}`, x + 20, y + 20);
+
+    col++;
+    x += labelWidth;
+
+    if (col >= 3) {
+      col = 0;
+      x = 0;
+      y += labelHeight;
+    }
+
+    if (y + labelHeight > 290) {
+      pdf.addPage();
+      x = 0;
+      y = 0;
+      col = 0;
+    }
+  }
+
+  await pdf.save(`${product.style_number}_${sizeLabel}.pdf`);
+};
 // Convert JsBarcode to SVG string
-function generateBarcodeSVG(value) {
+function generateBarcodeSVG2(value) {
   const svgNode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   JsBarcode(svgNode, value, {
     format: "CODE128",
@@ -213,7 +327,7 @@ function generateBarcodeImage(barcodeValue, width = 120, height = 40) {
 
 
 // Generate and print PDF with barcodes
-const generatePDFBarcode=(product, sizeLabel, quantity)=> {
+const generatePDFBarcodeLL=(product, sizeLabel, quantity)=> {
   // PDF in millimeters
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: [105, 297] });
   // 105mm ~ A6 width, matches roll (10.5cm)
