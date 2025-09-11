@@ -161,49 +161,54 @@ function generateBarcodeSVG(barcodeValue, height = 40) {
   return svg;
 }
 const generatePDFBarcode= async(product, sizeLabel, quantity)=>{
-  const barcodeValue = `${product.style_number}-${sizeLabel}-${product.mrp}`;
+  
   //alert('hi');
-  //const pdf = await new jsPDF({ orientation: "portrait", unit: "mm", format: [105, 297] });
-  const pdf = await new jsPDF({ orientation: "landscape", unit: "mm", format: [52, 146] });
+  const pdf = await new jsPDF({ orientation: "landscape", unit: "mm", format: [105, 297] });
+  //const pdf = await new jsPDF({ orientation: "landscape", unit: "mm", format: [62, 146] });
   //const svg = generateBarcodeSVG(barcodeValue)
-  const svg = generateBarcodeSVG("test123");
-//   const labelWidth = 104;  
-//   const labelHeight = 220; 
-//   let x = 0, y =0, col = 0;
+  //const svg = generateBarcodeSVG("test123");
+  const labelWidth = 105/3;  
+  const labelHeight = 22; 
+  let x = 0, y =0, col = 0;
 
-//   for (let i = 0; i < quantity; i++) {
-//     const paddingX = 2;
-//     const paddingY = 2;
+  for (let i = 0; i < quantity; i++) {
+    const paddedId = product.id.toString().padStart(4, "0"); 
+  const barcodeValue = `1${paddedId}${sizeLabel}`;
+  console.log(barcodeValue,product,quantity,sizeLabel);
+    const paddingX = 2;
+    const paddingY = 2;
+    console.log(i,x,y);
+    const svg = generateBarcodeSVG(barcodeValue)
+    await pdf.svg(svg, {
+  x: x + paddingX,
+  y: y + paddingY,
+  width: labelWidth - 4,
+  height: 12,
+  
+});
 
-//     await pdf.svg(svg, {
-//   x: x + paddingX,
-//   y: y + paddingY,
-//   width: labelWidth - 4,
-//   height: 12,
-// });
+    pdf.setFontSize(6);
+    pdf.text(`Style: ${product.style_number}`, x + 2, y + 14);
+    pdf.text(`Size: ${sizeLabel}`, x + 2, y + 17);
+    pdf.text(`MRP: ₹${product.mrp}`, x + 10, y + 17);
 
-//     pdf.setFontSize(6);
-//     pdf.text(`Style: ${product.style_number}`, x + 2, y + 17);
-//     pdf.text(`Size: ${sizeLabel}`, x + 2, y + 20);
-//     pdf.text(`MRP: ₹${product.mrp}`, x + 20, y + 20);
+    col++;
+    x += labelWidth;
 
-//     col++;
-//     x += labelWidth;
+    if (col >= 3) {
+      col = 0;
+      x = 0;
+      y += labelHeight;
+    }
 
-//     if (col >= 3) {
-//       col = 0;
-//       x = 0;
-//       y += labelHeight;
-//     }
-
-//     if (y + labelHeight > 290) {
-//       pdf.addPage();
-//       x = 0;
-//       y = 0;
-//       col = 0;
-//     }
-//   }
-await pdf.svg(svg, { x: 0, y: 0, width:70, height: 30 });
+    if (y + labelHeight > 290) {
+      pdf.addPage();
+      x = 0;
+      y = 0;
+      col = 0;
+    }
+  }
+//await pdf.svg(svg, { x: 5, y: -10, width:60, height: 100 });
 pdf.save("barcode.pdf"); 
 
 }
