@@ -41,7 +41,7 @@ const router = createBrowserRouter([
       },
       {
         path:"billing",
-        element:<Billing2/>
+        element:<Billing/>
       },
       {
         path: "/master",

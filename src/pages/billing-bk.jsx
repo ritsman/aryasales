@@ -1,11 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Plus, Trash2, Save, ShoppingCart, Printer, Camera, X } from 'lucide-react';
-import config from "../config";
-import { toWords } from 'number-to-words';
 
-const Billing = () => {
- 
-  const BASE_URL = config.APIPOST_URL;
+const BillingComponent = () => {
   const [customerDetails, setCustomerDetails] = useState({
     name: '',
     address: '',
@@ -116,34 +112,24 @@ const Billing = () => {
 
   // Mock API call to fetch product data
   const fetchProductData = async (productId) => {
-    console.log('Fetching product data for ID:', productId);
-    const response = await fetch(`${BASE_URL}/api/products/${productId}`);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch products");
-      }
-      const data = await response.json();
-      console.log('Product data received:', data);
-      return data.product;
-
-    // return new Promise((resolve) => {
-    //   setTimeout(() => {
-    //     const mockProducts = {
-    //       1: { name: 'T-Shirt Basic', price: 599, category: 'Apparel' },
-    //       2: { name: 'Jeans Regular', price: 1299, category: 'Apparel' },
-    //       3: { name: 'Sneakers Sport', price: 2999, category: 'Footwear' },
-    //       4: { name: 'Hoodie Premium', price: 1899, category: 'Apparel' }
-    //     };
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const mockProducts = {
+          1: { name: 'T-Shirt Basic', price: 599, category: 'Apparel' },
+          2: { name: 'Jeans Regular', price: 1299, category: 'Apparel' },
+          3: { name: 'Sneakers Sport', price: 2999, category: 'Footwear' },
+          4: { name: 'Hoodie Premium', price: 1899, category: 'Apparel' }
+        };
         
-    //     const product = mockProducts[productId] || {
-    //       name: `Product ${productId}`,
-    //       price: 999,
-    //       category: 'General'
-    //     };
+        const product = mockProducts[productId] || {
+          name: `Product ${productId}`,
+          price: 999,
+          category: 'General'
+        };
         
-    //     resolve(product);
-    //   }, 300);
-   // });
+        resolve(product);
+      }, 300);
+    });
   };
 
   // Handle barcode scan
@@ -172,17 +158,15 @@ const Billing = () => {
         setBillItems(updatedItems);
       } else {
         // Add new item
-        const cost_price = productData.mrp ? (parseFloat(productData.mrp)/1.05).toFixed(2) : 0; 
         const newItem = {
           id: Date.now(),
           productId,
-          name: productData.style_number,
+          name: productData.name,
           size: sizeLabel,
-          price:parseFloat(cost_price),
+          price: productData.price,
           quantity: 1,
-          total: parseFloat(cost_price)
+          total: productData.price
         };
-        console.log(cost_price,newItem);
         setBillItems([...billItems, newItem]);
       }
 
@@ -222,13 +206,65 @@ const Billing = () => {
   // Calculate totals
   const calculateTotals = () => {
     const subtotal = billItems.reduce((sum, item) => sum + item.total, 0);
-    const gstAmount = subtotal * 0.05; // 5% GST
+    const gstAmount = subtotal * 0.18;
     const total = subtotal + gstAmount;
     
     return { subtotal, gstAmount, total };
   };
 
-    // Generate receipt content for thermal printing
+  // Convert number to words
+  const numberToWords = (num) => {
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const teens = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+    if (num === 0) return 'Zero';
+    
+    const convertHundreds = (n) => {
+      let result = '';
+      
+      if (n >= 100) {
+        result += ones[Math.floor(n / 100)] + ' Hundred ';
+        n %= 100;
+      }
+      
+      if (n >= 10 && n < 20) {
+        result += teens[n - 10] + ' ';
+      } else {
+        if (n >= 20) {
+          result += tens[Math.floor(n / 10)] + ' ';
+        }
+        if (n % 10 > 0) {
+          result += ones[n % 10] + ' ';
+        }
+      }
+      
+      return result;
+    };
+    
+    let result = '';
+    const crores = Math.floor(num / 10000000);
+    const lakhs = Math.floor((num % 10000000) / 100000);
+    const thousands = Math.floor((num % 100000) / 1000);
+    const remainder = num % 1000;
+    
+    if (crores > 0) {
+      result += convertHundreds(crores) + 'Crore ';
+    }
+    if (lakhs > 0) {
+      result += convertHundreds(lakhs) + 'Lakh ';
+    }
+    if (thousands > 0) {
+      result += convertHundreds(thousands) + 'Thousand ';
+    }
+    if (remainder > 0) {
+      result += convertHundreds(remainder);
+    }
+    
+    return result.trim() + ' Rupees Only';
+  };
+
+  // Generate receipt content for thermal printing
   const generateReceiptContent = () => {
     const { subtotal, gstAmount, total } = calculateTotals();
     const now = new Date();
@@ -280,13 +316,13 @@ const Billing = () => {
     
     receipt += '-'.repeat(lineWidth) + '\n';
     receipt += leftRightAlign('Subtotal:', '₹' + subtotal.toFixed(2)) + '\n';
-    receipt += leftRightAlign('GST (5%):', '₹' + gstAmount.toFixed(2)) + '\n';
+    receipt += leftRightAlign('GST (18%):', '₹' + gstAmount.toFixed(2)) + '\n';
     receipt += '='.repeat(lineWidth) + '\n';
     receipt += leftRightAlign('TOTAL:', '₹' + total.toFixed(2)) + '\n';
     receipt += '='.repeat(lineWidth) + '\n';
     
     receipt += 'Amount in Words:\n';
-    const words = toWords(Math.round(total));
+    const words = numberToWords(Math.floor(total));
     receipt += words + '\n';
     
     receipt += '\n';
@@ -349,37 +385,14 @@ const Billing = () => {
     printWindow.document.write(printHTML);
     printWindow.document.close();
   };
-//validate customer details
-// NEW FUNCTION ADDED:
-const validateCustomerData = () => {
-  const errors = [];
-  
-  if (!customerDetails.name.trim()) {
-    errors.push('Customer name is required');
-  }
-  
-  if (!customerDetails.mobile.trim()) {
-    errors.push('Customer mobile number is required');
-  } else if (!/^\d{10}$/.test(customerDetails.mobile.trim())) {
-    errors.push('Mobile number must be 10 digits');
-  }
-  
-  // Address validation and GST validation code...
-  
-  return errors;
-};
+
   // Save and print bill
   const saveBill = async (shouldPrint = false) => {
     if (billItems.length === 0) {
       setError('Cannot save empty bill');
       return;
     }
-// NEW VALIDATION CODE ADDED:
-  const validationErrors = validateCustomerData();
-  if (validationErrors.length > 0) {
-    setError('Please fix the following errors:\n' + validationErrors.join('\n'));
-    return;
-  }
+
     setLoading(true);
     const { subtotal, gstAmount, total } = calculateTotals();
 
@@ -389,12 +402,12 @@ const validateCustomerData = () => {
       subtotal,
       gstAmount,
       total,
-      totalInWords: toWords(Math.round(total)),
+      totalInWords: numberToWords(Math.floor(total)),
       date: new Date().toISOString()
     };
-    console.log('Saving bill data:', billData);
+
     try {
-      const response = await fetch(`${BASE_URL}/api/bills`, {
+      const response = await fetch('/api/bills', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -510,7 +523,7 @@ const validateCustomerData = () => {
               </div>
             </div>
             
-            {error && <p className="text-red-600 text-sm">{error}</p>}
+            {error && <p className="text-red-600 text-sm whitespace-pre-line bg-red-50 p-2 rounded border">{error}</p>}
           </div>
 
           {/* Camera Scanner Modal */}
@@ -620,7 +633,7 @@ const validateCustomerData = () => {
           {billItems.length > 0 && (
             <div className="bg-green-50 p-3 sm:p-4 rounded-lg">
               <h3 className="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Amount in Words:</h3>
-              <p className="text-base sm:text-lg font-medium text-green-800">{toWords(total)}</p>
+              <p className="text-base sm:text-lg font-medium text-green-800">{convertToWords(total)}</p>
             </div>
           )}
 
@@ -658,4 +671,4 @@ const validateCustomerData = () => {
   );
 };
 
-export default Billing;
+export default BillingComponent;

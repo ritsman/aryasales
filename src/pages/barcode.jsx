@@ -161,9 +161,50 @@ function generateBarcodeSVG(barcodeValue, height = 40) {
   return svg;
 }
 
+const generatePDFBarcode = async (product, sizeLabel, quantity) => {
+  // Page size: 105mm wide (3 labels) x 22mm tall (label height)
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [105, 22] });
+
+  const labelWidth = 35;   // each label width
+  const labelHeight = 22;  // each label height
+  let col = 0, x = 0;
+
+  for (let i = 0; i < quantity; i++) {
+    const paddedId = product.id.toString().padStart(4, "0");
+    const barcodeValue = `1${paddedId}${sizeLabel}`;
+    const svg = generateBarcodeSVG(barcodeValue);
+
+    // draw barcode inside its label box
+    await pdf.svg(svg, {
+      x: x + 2,
+      y: 2,
+      width: labelWidth - 4,
+      height: 10,
+    });
+
+    // add text under barcode
+    pdf.setFontSize(6);
+    pdf.text(`Style: ${product.style_number}`, x + 2, 14);
+    pdf.text(`Size: ${sizeLabel}`, x + 2, 16);
+    pdf.text(`MRP: ₹${product.mrp}`, x + 9, 16);
+
+    // move to next column
+    col++;
+    x += labelWidth;
+
+    // if 3 columns filled OR last barcode → new page
+    if (col >= 3 || i === quantity - 1) {
+      if (i < quantity - 1) pdf.addPage();
+      col = 0;
+      x = 0;
+    }
+  }
+
+  pdf.save("barcode.pdf");
+};
 
 // Function to generate PDF with barcodes
-const generatePDFBarcode = async (product, sizeLabel, quantity) => {
+const generatePDFBarcodePage = async (product, sizeLabel, quantity) => {
   const barcodeValue = `${product.style_number}${sizeLabel}-${product.mrp}`;
   const pdf = new jsPDF({
     orientation: "portrait",
