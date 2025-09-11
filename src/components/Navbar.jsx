@@ -8,7 +8,7 @@ const navLinks = [
   { name: "scheduler" },
   { name: "gallery",path: "/gallery" },
   { name: "sales" },
-  { name: "workorder" },
+  { name: "billing",path: "/billing" },
   { name: "material" },
   { name: "inventory",path: "/inventory" },
   { name: "barcode",path: "/barcode" },

@@ -13,6 +13,8 @@ import AddSize from "./pages/Size/AddSize";
 import Gallery from "./pages/gallery";
 import Inventory from "./pages/inventory";
 import Barcode from "./pages/barcode";
+import Billing from "./pages/billing";
+import Billing2 from "./pages/camscan";
 
 
 const router = createBrowserRouter([
@@ -36,6 +38,10 @@ const router = createBrowserRouter([
       {
         path:"barcode",
         element:<Barcode/>
+      },
+      {
+        path:"billing",
+        element:<Billing2/>
       },
       {
         path: "/master",

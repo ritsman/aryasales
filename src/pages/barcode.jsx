@@ -160,7 +160,69 @@ function generateBarcodeSVG(barcodeValue, height = 40) {
 
   return svg;
 }
-const generatePDFBarcode= async(product, sizeLabel, quantity)=>{
+
+
+// Function to generate PDF with barcodes
+const generatePDFBarcode = async (product, sizeLabel, quantity) => {
+  const barcodeValue = `${product.style_number}${sizeLabel}-${product.mrp}`;
+  const pdf = new jsPDF({
+    orientation: "portrait",
+    unit: "mm",
+    format: [105, 297], // Half A4 page size
+  });
+
+  // Label grid settings
+  const labelWidth = 105 / 3;  // 3 columns
+  const labelHeight = 28;      // Enough space for barcode + text
+  let x = 0;
+  let y = 0;
+  let col = 0;
+
+  for (let i = 0; i < quantity; i++) {
+    // Generate barcode SVG
+     const paddedId = product.id.toString().padStart(4, "0"); 
+    const barcodeValue = `1${paddedId}${sizeLabel}`;
+    const svg = generateBarcodeSVG(barcodeValue);
+
+    // Add barcode
+    await pdf.svg(svg, {
+      x: x + 2,
+      y: y + 2,
+      width: labelWidth - 4,
+      height: 12,
+    });
+
+    // Add product details
+    pdf.setFontSize(6);
+    pdf.text(`Style: ${product.style_number}`, x + 2, y + 16);
+    pdf.text(`Size: ${sizeLabel}`, x + 2, y + 20);
+    pdf.text(`MRP: ₹${product.mrp}`, x + 10, y + 20);
+
+    // Move to next column
+    col++;
+    x += labelWidth;
+
+    // If row is filled (3 cols), reset X and move down
+    if (col >= 3) {
+      col = 0;
+      x = 0;
+      y += labelHeight;
+    }
+
+    // If page is filled, add new page
+    if (y + labelHeight > 290) {
+      pdf.addPage();
+      x = 0;
+      y = 0;
+      col = 0;
+    }
+  }
+
+  // Save file
+  pdf.save(`${product.style_number}_barcodes.pdf`);
+};
+
+const generatePDFBarcodeGood= async(product, sizeLabel, quantity)=>{
   
   //alert('hi');
   const pdf = await new jsPDF({ orientation: "landscape", unit: "mm", format: [105, 297] });
@@ -168,7 +230,7 @@ const generatePDFBarcode= async(product, sizeLabel, quantity)=>{
   //const svg = generateBarcodeSVG(barcodeValue)
   //const svg = generateBarcodeSVG("test123");
   const labelWidth = 105/3;  
-  const labelHeight = 22; 
+  const labelHeight = 28; 
   let x = 0, y =0, col = 0;
 
   for (let i = 0; i < quantity; i++) {
