@@ -114,3 +114,44 @@ CREATE INDEX idx_product_stock_reference
 -- 4. Optional: if you frequently filter by movement_type (CREDIT/DEBIT)
 CREATE INDEX idx_product_stock_movement_type 
     ON products_stock (movement_type);
+
+-- bill tables
+CREATE TABLE IF NOT EXISTS billing_main (
+    bill_id SERIAL PRIMARY KEY,
+    bill_no VARCHAR(30) UNIQUE NOT NULL,
+    customer_name VARCHAR(100),
+    customer_mobile VARCHAR(20),
+    customer_address TEXT,
+    customer_gst_no VARCHAR(20),
+    bill_date TIMESTAMP DEFAULT NOW(),
+    subtotal NUMERIC(12,2) NOT NULL,
+    gst_amount NUMERIC(12,2) NOT NULL,
+    total NUMERIC(12,2) NOT NULL,
+    total_in_words VARCHAR(255)
+);
+CREATE TABLE IF NOT EXISTS billing_detail (
+    detail_id SERIAL PRIMARY KEY,
+    bill_id INT NOT NULL REFERENCES billing_main(bill_id) ON DELETE CASCADE,
+    product_id INT NOT NULL REFERENCES products_master(id) ON DELETE RESTRICT,
+    size VARCHAR(20),
+    quantity INT NOT NULL,
+    price NUMERIC(12,2) NOT NULL,       -- price snapshot at time of billing
+    line_total NUMERIC(12,2) NOT NULL
+);
+
+-- Helpful indexes
+CREATE INDEX IF NOT EXISTS idx_billing_detail_bill_id ON billing_detail(bill_id);
+CREATE INDEX IF NOT EXISTS idx_billing_detail_product_id ON billing_detail(product_id);
+
+-- table to hold monthly counters
+CREATE TABLE IF NOT EXISTS bill_counters (
+  year_month VARCHAR(6) PRIMARY KEY, -- e.g. '202509'
+  counter INT NOT NULL DEFAULT 0
+);
+-- For fast lookup by mobile number (exact match, very common in POS)
+CREATE INDEX IF NOT EXISTS idx_billing_main_customer_mobile
+  ON billing_main (customer_mobile);
+
+-- For exact search on full name (rarely used, but cheap)
+CREATE INDEX IF NOT EXISTS idx_billing_main_customer_name
+  ON billing_main (customer_name);
