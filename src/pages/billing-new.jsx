@@ -16,8 +16,6 @@ const Billing = () => {
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(false);
-  // NEW STATE ADDED:
-const [paymentMode, setPaymentMode] = useState('cash');
   
   const barcodeInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -404,7 +402,6 @@ const [paymentMode, setPaymentMode] = useState('cash');
       customerDetails,
       items: billItems,
       subtotal,
-      paymentMode,
       gstAmount,
       total,
       totalInWords: numberToWords(Math.floor(total)),
@@ -412,7 +409,6 @@ const [paymentMode, setPaymentMode] = useState('cash');
     };
 
     try {
-        console.log('Bill Data to be saved:', billData); // For debugging
       const response = await fetch('/api/bills', {
         method: 'POST',
         headers: {
@@ -634,35 +630,6 @@ const [paymentMode, setPaymentMode] = useState('cash');
               </div>
             )}
           </div>
-          {/* Payment Mode & Total Section */}
-{billItems.length > 0 && (
-  <div className="bg-yellow-50 p-3 sm:p-4 rounded-lg">
-    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-      <div>
-        <h3 className="text-lg font-semibold text-gray-700 mb-2">Payment Details</h3>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-          <label className="text-sm font-medium text-gray-600">Payment Mode:</label>
-          <select
-            value={paymentMode}
-            onChange={(e) => setPaymentMode(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base bg-white"
-          >
-            <option value="cash">Cash</option>
-            <option value="upi">UPI</option>
-            <option value="card">Card</option>
-            <option value="credit">Credit</option>
-          </select>
-        </div>
-      </div>
-      <div className="text-right">
-        <div className="text-2xl sm:text-3xl font-bold text-green-700">
-          ₹{total.toFixed(2)}
-        </div>
-        <div className="text-sm text-gray-600">Total Amount</div>
-      </div>
-    </div>
-  </div>
-)}
 
           {/* Total in Words */}
           {billItems.length > 0 && (
