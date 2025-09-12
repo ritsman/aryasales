@@ -15,6 +15,7 @@ import Inventory from "./pages/inventory";
 import Barcode from "./pages/barcode";
 import Billing from "./pages/billing";
 import Billing2 from "./pages/camscan";
+import BillingNew from "./pages/billing-new";
 
 
 const router = createBrowserRouter([
@@ -41,7 +42,7 @@ const router = createBrowserRouter([
       },
       {
         path:"billing",
-        element:<Billing/>
+        element:<BillingNew/>
       },
       {
         path: "/master",
