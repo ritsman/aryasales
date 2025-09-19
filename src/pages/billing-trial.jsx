@@ -3,7 +3,6 @@ import { Plus, Trash2, Save, ShoppingCart, Printer, Camera, X } from 'lucide-rea
 import config from "../config";
 import { toWords } from 'number-to-words';
 import { BrowserMultiFormatReader } from "@zxing/library";
-import BarcodeScanner from "./barcodeScanner";
 
 const Billing = () => {
  
@@ -21,7 +20,6 @@ const Billing = () => {
   const [error, setError] = useState('');
   const [showScanner, setShowScanner] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(false);
-  const [scanning, setScanning] = useState(false);
   
   const barcodeInputRef = useRef(null);
   const videoRef = useRef(null);
@@ -45,9 +43,85 @@ const Billing = () => {
     }
   }, []);
 
-  
+  // Cleanup camera stream when scanner is closed
+  useEffect(() => {
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
 
-  
+  // Start camera for barcode scanning
+  const startCameraEar = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment', // Use back camera on mobile
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+      
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
+      setShowScanner(true);
+    } catch (err) {
+      setError('Camera access denied or not available');
+    }
+  };
+
+  // Stop camera
+  const stopCameraEar = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    setShowScanner(false);
+  };
+const codeReader = new BrowserMultiFormatReader();
+
+
+// Start camera + ZXing
+  const startCamera = async () => {
+    try {
+      
+      codeReaderRef.current = codeReader;
+
+      await codeReader.decodeFromVideoDevice(
+        null, // auto select camera
+        videoRef.current,
+        (result, err) => {
+          if (result) {
+            const barcode = result.getText();
+            console.log("Scanned:", barcode);
+            handleBarcodeScan(barcode);
+            stopCamera();
+          }
+        }
+      );
+
+      setShowScanner(true);
+    } catch (err) {
+      console.error(err);
+      setError("Camera access denied or not available");
+    }
+  };
+
+// Stop camera + release resources
+  const stopCamera = () => {
+    if (codeReaderRef.current) {
+      codeReaderRef.current.reset();
+      codeReaderRef.current = null;
+    }
+    setShowScanner(false);
+  };
+// Cleanup on unmount
+  useEffect(() => {
+    return () => stopCamera();
+  }, []);
   // Simulate barcode detection (you would integrate with a real barcode library like QuaggaJS or ZXing)
   const captureBarcode = () => {
     if (!videoRef.current || !canvasRef.current) return;
@@ -98,12 +172,29 @@ const Billing = () => {
       console.log('Product data received:', data);
       return data.product;
 
+    // return new Promise((resolve) => {
+    //   setTimeout(() => {
+    //     const mockProducts = {
+    //       1: { name: 'T-Shirt Basic', price: 599, category: 'Apparel' },
+    //       2: { name: 'Jeans Regular', price: 1299, category: 'Apparel' },
+    //       3: { name: 'Sneakers Sport', price: 2999, category: 'Footwear' },
+    //       4: { name: 'Hoodie Premium', price: 1899, category: 'Apparel' }
+    //     };
+        
+    //     const product = mockProducts[productId] || {
+    //       name: `Product ${productId}`,
+    //       price: 999,
+    //       category: 'General'
+    //     };
+        
+    //     resolve(product);
+    //   }, 300);
+   // });
   };
 
   // Handle barcode scan
   const handleBarcodeScan = async (barcodeValue = null) => {
     const barcode = barcodeValue || scannedBarcode.trim();
-    //alert(`barcode${barcode}`)
     if (!barcode) return;
 
     setLoading(true);
@@ -445,7 +536,7 @@ const validateCustomerData = () => {
               <div className="flex gap-2">
                 {scannerSupported && (
                   <button
-                    onClick={() => setScanning(true)}
+                    onClick={startCamera}
                     disabled={loading || showScanner}
                     className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:opacity-50 flex items-center gap-2 text-sm sm:text-base"
                   >
@@ -453,17 +544,6 @@ const validateCustomerData = () => {
                     <span className="hidden sm:inline">Scan</span>
                   </button>
                 )}
-                {scanning && (
-        <BarcodeScanner
-          onDetected={code => {
-            //alert(code);
-            //setLastCode(code);
-            handleBarcodeScan(code);
-            setScanning(false);
-          }}
-          onClose={() => setScanning(false)}
-        />
-      )}
                 
                 <button
                   onClick={() => handleBarcodeScan()}
