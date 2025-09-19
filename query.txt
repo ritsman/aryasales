@@ -1,0 +1,283 @@
+this is my products_master table:
+ id | style_number | style_name | season | hsn_code | cost  |  mrp  | size_set | process_group |   item_bom   |                     picture_url                      |       created_at        |       updated_at
+
+this is my products_stock table:
+stock_id | product_id | size_label | quantity | movement_type | reference_no  |       movement_date        |         created_at
+
+where prdouct_id in products_stock is id in products_master
+
+this is my billing_main table:
+ bill_id |     bill_no      | customer_name | customer_mobile | customer_address | customer_gst_no |        bill_date        | subtotal | gst_amount | total | total_in_words
+
+and this is my billing_detail table:
+ detail_id | bill_id | product_id | size | quantity | price | line_total
+
+i want a react component which displays 50 bill from bill_main by default on the page,
+the page should havaa search field on top to get bill based on date query or by mobile number 
+also each row should have the icon to expand bill, clicking on which will open a new page displaying the bill and bill details in full,in that page there should be option to edit or delete that bill
+
+if you can give additional facility to arrange columns in ascending or descending order, it will help greatly.
+also at the end of the table, it should have column total
+
+
+this is my billdata on submit the button:
+customerDetails
+: 
+address
+: 
+"asdf"
+gstNo
+: 
+""
+mobile
+: 
+"9820083733"
+name
+: 
+"sadf"
+[[Prototype]]
+: 
+Object
+date
+: 
+"2025-09-17T14:21:19.537Z"
+discountAmount
+: 
+0
+discountPercentage
+: 
+0
+discountedSubtotal
+: 
+349
+gstAmount
+: 
+"3.32"
+items
+: 
+Array(1)
+0
+: 
+id
+: 
+1758117250869
+name
+: 
+"SS25G-A5"
+price
+: 
+349
+productId
+: 
+74
+quantity
+: 
+1
+size
+: 
+"L"
+total
+: 
+349
+[[Prototype]]
+: 
+Object
+length
+: 
+1
+[[Prototype]]
+: 
+Array(0)
+paymentMode
+: 
+"cash"
+subtotal
+: 
+349
+total
+: 
+349
+totalInWords
+: 
+"three hundred forty-nine"
+
+as you see i have done some changes in front end, now discountpercentage and discountamount are added
+and gst is inclusive in total calculated by total/105
+
+i want to drop billing_main table, make new one with addtional fields
+
+also in billcontroller:
+const pool = require("../config/database");
+const BillModel = require("../models/Bill");
+
+class BillController {
+  // Generate monthly bill number atomically using the provided client
+  // billDate can be provided (so back-dated bills use its month) or omitted (use today)
+  async generateMonthlyBillNo(client, billDate) {
+    const date = billDate ? new Date(billDate) : new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const yearMonth = `${year}${month}`; // '202509'
+
+    // Atomic upsert + return counter
+    const q = `
+      INSERT INTO bill_counters (year_month, counter)
+      VALUES ($1, 1)
+      ON CONFLICT (year_month)
+      DO UPDATE SET counter = bill_counters.counter + 1
+      RETURNING counter
+    `;
+    const r = await client.query(q, [yearMonth]);
+    const counter = r.rows[0].counter;
+
+    const counterStr = String(counter).padStart(4, "0"); // e.g. 0001
+    const billNo = `BILL-${yearMonth}-${counterStr}`;
+    return billNo;
+  }
+
+  // Save bill API (POST /api/bills)
+  async saveBill(req, res) {
+    const payload = req.body;
+    const client = await pool.connect();
+
+    try {
+      await client.query("BEGIN");
+
+      // generate monthly bill no (based on payload.date if provided)
+      const billNo = await this.generateMonthlyBillNo(client, payload.date);
+      payload.billNo = billNo;
+
+      // create main bill
+      const main = await BillModel.createMainBill(client, payload);
+      const billId = main.bill_id;
+
+      // create details
+      await BillModel.createBillDetails(client, billId, payload.items || []);
+
+      await client.query("COMMIT");
+
+      return res.json({
+        success: true,
+        message: "Bill saved",
+        billId,
+        billNo,
+      });
+    } catch (err) {
+      await client.query("ROLLBACK");
+      console.error("saveBill error:", err);
+      return res.status(500).json({ success: false, error: err.message });
+    } finally {
+      client.release();
+    }
+  }
+
+  // GET /api/bills/:billNo
+  async getBill(req, res) {
+    try {
+      const { billNo } = req.params;
+      const bill = await BillModel.getBillByNo(billNo);
+      if (!bill) {
+        return res.status(404).json({ success: false, message: "Bill not found" });
+      }
+      return res.json({ success: true, bill });
+    } catch (err) {
+      console.error("getBill error:", err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+}
+
+module.exports = new BillController();
+
+and in bill model:
+// models/BillModel.js
+const pool = require("./index"); // change path if your pool is elsewhere
+
+class BillModel {
+  // create main bill, returns { bill_id, bill_no }
+  async createMainBill(client, billData) {
+    const {
+      billNo,
+      customerDetails,
+      date,
+      subtotal,
+      gstAmount,
+      total,
+      totalInWords,
+    } = billData;
+
+    const q = `
+      INSERT INTO billing_main
+        (bill_no, customer_name, customer_mobile, customer_address, customer_gst_no,
+         bill_date, subtotal, gst_amount, total, total_in_words)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+      RETURNING bill_id, bill_no;
+    `;
+
+    const values = [
+      billNo,
+      customerDetails?.name ?? null,
+      customerDetails?.mobile ?? null,
+      customerDetails?.address ?? null,
+      customerDetails?.gstNo ?? null,
+      date ?? new Date(), // use provided date or now
+      subtotal ?? 0,
+      gstAmount ?? 0,
+      total ?? 0,
+      totalInWords ?? null,
+    ];
+
+    const r = await client.query(q, values);
+    return r.rows[0];
+  }
+
+  // insert each item (detail)
+  async createBillDetails(client, billId, items = []) {
+    if (!items || items.length === 0) return;
+
+    const q = `
+      INSERT INTO billing_detail
+        (bill_id, product_id, size, quantity, price, line_total)
+      VALUES ($1,$2,$3,$4,$5,$6)
+    `;
+    for (const it of items) {
+      // item keys: productId, size, quantity, price, total (line total)
+      await client.query(q, [
+        billId,
+        it.productId,
+        it.size ?? null,
+        it.quantity,
+        it.price,
+        it.total,
+      ]);
+    }
+  }
+
+  // fetch bill header + items with product_master join
+  async getBillByNo(billNo) {
+    // first fetch header
+    const mainQ = `SELECT * FROM billing_main WHERE bill_no = $1`;
+    const mainRes = await pool.query(mainQ, [billNo]);
+    if (mainRes.rows.length === 0) return null;
+    const main = mainRes.rows[0];
+
+    // then fetch items joined with products_master
+    const itemsQ = `
+      SELECT bd.detail_id, bd.product_id, bd.size, bd.quantity, bd.price, bd.line_total,
+             pm.style_number, pm.style_name, pm.mrp
+      FROM billing_detail bd
+      JOIN products_master pm ON bd.product_id = pm.id
+      WHERE bd.bill_id = $1
+      ORDER BY bd.detail_id
+    `;
+    const itemsRes = await pool.query(itemsQ, [main.bill_id]);
+
+    return {
+      main,
+      items: itemsRes.rows,
+    };
+  }
+}
+
+module.exports = new BillModel();
+please do the necessary changes

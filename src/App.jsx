@@ -16,6 +16,7 @@ import Barcode from "./pages/barcode";
 import Billing from "./pages/billing";
 import Billing2 from "./pages/camscan";
 import BillingNew from "./pages/billing-new";
+import Dispatch from "./pages/dispatch";
 
 
 const router = createBrowserRouter([
@@ -43,6 +44,10 @@ const router = createBrowserRouter([
       {
         path:"billing",
         element:<BillingNew/>
+      },
+      {
+        path:"dispatch",
+        element:<Dispatch/>
       },
       {
         path: "/master",

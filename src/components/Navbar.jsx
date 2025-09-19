@@ -13,7 +13,7 @@ const navLinks = [
   { name: "inventory",path: "/inventory" },
   { name: "barcode",path: "/barcode" },
   { name: "master",path: "/master" },
-  { name: "shipment" },
+  { name: "dispatch",path: "/dispatch" },
 ];
 
 const Navbar = () => {

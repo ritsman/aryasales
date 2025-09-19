@@ -25,9 +25,9 @@ export const Home = () => {
       desc: "Listing of all Units of Measurement",
     },
     {
-      name: "Work Order",
-      path: "workorder",
-      desc: "Listing of all Units of Measurement",
+      name: "Barcode",
+      path: "barcode",
+      desc: "All Products with Barcode",
     },
 
     { name: "Material", path: "material", desc: "Listing of all Activities" },
@@ -44,9 +44,14 @@ export const Home = () => {
       desc: "Listing of all Units of Measurement",
     },
     {
-      name: "Shipment",
-      path: "shipment",
-      desc: "Listing of all groups",
+      name: "Dispatch",
+      path: "dispatch",
+      desc: "All Bills Backend",
+    },
+    {
+      name: "New Bill",
+      path: "billing",
+      desc: "Make New Bill here",
     },
     { name: "Scheduler", path: "scheduler", desc: "Listing of all Products" },
   ];

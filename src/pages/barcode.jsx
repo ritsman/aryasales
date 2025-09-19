@@ -162,9 +162,8 @@ function generateBarcodeSVG(barcodeValue, height = 40) {
 }
 
 const generatePDFBarcode = async (product, sizeLabel, quantity) => {
-  //LATEST, HOPE THIS IS THE ONE
   // Page size: 105mm wide (3 labels) x 22mm tall (label height)
-  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: [105, 22] });
+  const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: [105, 110] });
 
   const labelWidth = 35;   // each label width
   const labelHeight = 22;  // each label height
