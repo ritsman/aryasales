@@ -1,29 +1,24 @@
 // models/BillModel.js
-const pool = require("../config/database");
+const pool = require("./index"); // change path if your pool is elsewhere
 
 class BillModel {
-  // create main bill
+  // create main bill, returns { bill_id, bill_no }
   async createMainBill(client, billData) {
     const {
       billNo,
       customerDetails,
       date,
       subtotal,
-      discountPercentage,
-      discountAmount,
-      discountedSubtotal,
       gstAmount,
       total,
       totalInWords,
-      paymentMode,
     } = billData;
 
     const q = `
       INSERT INTO billing_main
         (bill_no, customer_name, customer_mobile, customer_address, customer_gst_no,
-         bill_date, subtotal, discount_percentage, discount_amount, discounted_subtotal,
-         gst_amount, total, total_in_words, payment_mode)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+         bill_date, subtotal, gst_amount, total, total_in_words)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
       RETURNING bill_id, bill_no;
     `;
 
@@ -33,40 +28,15 @@ class BillModel {
       customerDetails?.mobile ?? null,
       customerDetails?.address ?? null,
       customerDetails?.gstNo ?? null,
-      date ?? new Date(),
+      date ?? new Date(), // use provided date or now
       subtotal ?? 0,
-      discountPercentage ?? 0,
-      discountAmount ?? 0,
-      discountedSubtotal ?? subtotal ?? 0,
       gstAmount ?? 0,
       total ?? 0,
       totalInWords ?? null,
-      paymentMode ?? "cash",
     ];
 
     const r = await client.query(q, values);
     return r.rows[0];
-  }
-    // record stock movement (DEBIT on sale)
-  async createStockMovements(client, billId, billNo, date, items = []) {
-    if (!items || items.length === 0) return;
-
-    const q = `
-      INSERT INTO products_stock
-        (product_id, size_label, quantity, movement_type, reference_no, movement_date, created_at)
-      VALUES ($1,$2,$3,$4,$5,$6,NOW())
-    `;
-
-    for (const it of items) {
-      await client.query(q, [
-        it.productId,
-        it.size ?? null,
-        it.quantity,
-        "DEBIT",        // since it's a sale
-        billNo,
-        date ?? new Date(),
-      ]);
-    }
   }
 
   // insert each item (detail)
@@ -79,6 +49,7 @@ class BillModel {
       VALUES ($1,$2,$3,$4,$5,$6)
     `;
     for (const it of items) {
+      // item keys: productId, size, quantity, price, total (line total)
       await client.query(q, [
         billId,
         it.productId,
@@ -90,13 +61,15 @@ class BillModel {
     }
   }
 
-  // fetch bill header + items
+  // fetch bill header + items with product_master join
   async getBillByNo(billNo) {
+    // first fetch header
     const mainQ = `SELECT * FROM billing_main WHERE bill_no = $1`;
     const mainRes = await pool.query(mainQ, [billNo]);
     if (mainRes.rows.length === 0) return null;
     const main = mainRes.rows[0];
 
+    // then fetch items joined with products_master
     const itemsQ = `
       SELECT bd.detail_id, bd.product_id, bd.size, bd.quantity, bd.price, bd.line_total,
              pm.style_number, pm.style_name, pm.mrp
@@ -111,31 +84,6 @@ class BillModel {
       main,
       items: itemsRes.rows,
     };
-  }
-  // fetch all main bills
-  async getAllBillsMain() {
-    const q = `
-      SELECT *
-      FROM billing_main
-      ORDER BY bill_date DESC, bill_id DESC
-    `;
-    const res = await pool.query(q);
-    return res.rows;
-  }
-
-  // fetch all bill details
-  async getAllBillsDetail() {
-    const q = `
-      SELECT bd.detail_id, bd.bill_id, bd.product_id, bd.size, bd.quantity, bd.price, bd.line_total,
-             pm.style_number, pm.style_name, pm.mrp,
-             bm.bill_no, bm.customer_name, bm.bill_date
-      FROM billing_detail bd
-      JOIN products_master pm ON bd.product_id = pm.id
-      JOIN billing_main bm ON bd.bill_id = bm.bill_id
-      ORDER BY bd.detail_id
-    `;
-    const res = await pool.query(q);
-    return res.rows;
   }
 }
 

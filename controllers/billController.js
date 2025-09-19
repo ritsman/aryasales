@@ -28,6 +28,7 @@ class BillController {
   }
 
   // Save bill API (POST /api/bills)
+  
   async saveBill(req, res) {
     const payload = req.body;
     const client = await pool.connect();
@@ -35,7 +36,7 @@ class BillController {
     try {
       await client.query("BEGIN");
 
-      // generate monthly bill no (based on payload.date if provided)
+      // generate monthly bill no
       const billNo = await this.generateMonthlyBillNo(client, payload.date);
       payload.billNo = billNo;
 
@@ -43,17 +44,25 @@ class BillController {
       const main = await BillModel.createMainBill(client, payload);
       const billId = main.bill_id;
 
-      // create details
+      // create bill details
       await BillModel.createBillDetails(client, billId, payload.items || []);
 
-      await client.query("COMMIT");
-
-      return res.json({
-        success: true,
-        message: "Bill saved",
+      // create stock movements
+      await BillModel.createStockMovements(
+        client,
         billId,
         billNo,
-      });
+        payload.date,
+        payload.items || []
+      );
+
+      await client.query("COMMIT");
+      const bill = await BillModel.getBillByNo(billNo);
+      return res.json({
+      success: true,
+      message: "Bill saved",
+      bill,
+    });
     } catch (err) {
       await client.query("ROLLBACK");
       console.error("saveBill error:", err);
@@ -74,6 +83,27 @@ class BillController {
       return res.json({ success: true, bill });
     } catch (err) {
       console.error("getBill error:", err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+  // GET /api/bills-main
+  async getAllBillsMain(req, res) {
+    try {
+      const bills = await BillModel.getAllBillsMain();
+      return res.json({ success: true, bills });
+    } catch (err) {
+      console.error("getAllBillsMain error:", err);
+      return res.status(500).json({ success: false, error: err.message });
+    }
+  }
+
+  // GET /api/bills-detail
+  async getAllBillsDetail(req, res) {
+    try {
+      const details = await BillModel.getAllBillsDetail();
+      return res.json({ success: true, details });
+    } catch (err) {
+      console.error("getAllBillsDetail error:", err);
       return res.status(500).json({ success: false, error: err.message });
     }
   }

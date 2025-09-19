@@ -116,18 +116,24 @@ CREATE INDEX idx_product_stock_movement_type
     ON products_stock (movement_type);
 
 -- bill tables
-CREATE TABLE IF NOT EXISTS billing_main (
-    bill_id SERIAL PRIMARY KEY,
-    bill_no VARCHAR(30) UNIQUE NOT NULL,
-    customer_name VARCHAR(100),
-    customer_mobile VARCHAR(20),
-    customer_address TEXT,
-    customer_gst_no VARCHAR(20),
-    bill_date TIMESTAMP DEFAULT NOW(),
-    subtotal NUMERIC(12,2) NOT NULL,
-    gst_amount NUMERIC(12,2) NOT NULL,
-    total NUMERIC(12,2) NOT NULL,
-    total_in_words VARCHAR(255)
+CREATE TABLE billing_main (
+  bill_id SERIAL PRIMARY KEY,
+  bill_no VARCHAR(50) UNIQUE NOT NULL,
+  customer_name VARCHAR(255),
+  customer_mobile VARCHAR(20),
+  customer_address TEXT,
+  customer_gst_no VARCHAR(50),
+  bill_date TIMESTAMP NOT NULL DEFAULT NOW(),
+  subtotal NUMERIC(12,2) DEFAULT 0,          -- before discount
+  discount_percentage NUMERIC(5,2) DEFAULT 0,
+  discount_amount NUMERIC(12,2) DEFAULT 0,
+  discounted_subtotal NUMERIC(12,2) DEFAULT 0,
+  gst_amount NUMERIC(12,2) DEFAULT 0,        -- extracted from total/105 * 5
+  total NUMERIC(12,2) DEFAULT 0,             -- final after discount + GST inclusive
+  total_in_words TEXT,
+  payment_mode VARCHAR(50),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
 );
 CREATE TABLE IF NOT EXISTS billing_detail (
     detail_id SERIAL PRIMARY KEY,
@@ -148,10 +154,20 @@ CREATE TABLE IF NOT EXISTS bill_counters (
   year_month VARCHAR(6) PRIMARY KEY, -- e.g. '202509'
   counter INT NOT NULL DEFAULT 0
 );
--- For fast lookup by mobile number (exact match, very common in POS)
-CREATE INDEX IF NOT EXISTS idx_billing_main_customer_mobile
-  ON billing_main (customer_mobile);
+-- Primary key already exists on bill_id (SERIAL)
+ALTER TABLE billing_main ADD CONSTRAINT uq_bill_no UNIQUE (bill_no);
 
--- For exact search on full name (rarely used, but cheap)
-CREATE INDEX IF NOT EXISTS idx_billing_main_customer_name
-  ON billing_main (customer_name);
+-- For quick lookup by bill number (your getBillByNo uses this)
+CREATE INDEX idx_billing_main_bill_no ON billing_main(bill_no);
+
+-- For filtering or reporting by bill date
+CREATE INDEX idx_billing_main_bill_date ON billing_main(bill_date);
+
+-- For customer mobile searches (common in POS)
+CREATE INDEX idx_billing_main_customer_mobile ON billing_main(customer_mobile);
+
+-- For customer name searches (useful for LIKE queries)
+CREATE INDEX idx_billing_main_customer_name ON billing_main(customer_name);
+
+-- If you often filter by GST number (B2B customers)
+CREATE INDEX idx_billing_main_customer_gst_no ON billing_main(customer_gst_no);
