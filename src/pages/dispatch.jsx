@@ -3,6 +3,7 @@ import { Search, ChevronDown, ChevronUp, Eye, Edit, Trash2, ArrowLeft, Plus, Min
 import config from "../config";
 import { toWords } from 'number-to-words';
 import { logoBase64 } from '../assets/logobase64';
+import QRCode from "qrcode";
 // Mock data for demonstration
 const mockBillData = Array.from({ length: 100 }, (_, i) => ({
   bill_id: i + 1,
@@ -209,8 +210,8 @@ const Dispatch = () => {
       
       // Add discount if applicable
       if (main.discount_amount > 0) {
-        receipt += leftRightAlign(`Discount (${main.discount_percentage}%):`, '-₹' + main.discount_amount.toFixed(2)) + '\n';
-        receipt += leftRightAlign('After Discount:', '₹' + main.discounted_subtotal.toFixed(2)) + '\n';
+        receipt += leftRightAlign(`Discount (${main.discount_percentage}%):`, '-₹' + main.discount_amount) + '\n';
+        receipt += leftRightAlign('After Discount:', '₹' + main.discounted_subtotal) + '\n';
       }
       
       //receipt += leftRightAlign('GST (18%):', '₹' + gstAmount.toFixed(2)) + '\n';
@@ -236,7 +237,15 @@ const Dispatch = () => {
       
       return receipt;
     };
-
+function toSentenceCase(str) {
+  // Return an empty string if the input is not a string or is empty
+  if (!str || typeof str !== 'string') {
+    return '';
+  }
+  
+  // Capitalize the first letter and concatenate it with the rest of the string in lowercase
+  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
     //printer :A4 printer
 const handlePrintA4 = async (billNo) => {
     try {
@@ -248,6 +257,12 @@ const handlePrintA4 = async (billNo) => {
             return;
         }
         const{main,items}=data.bill;
+        const upiId = "8788963719@axl";   // Replace with your UPI ID
+          const payeeName = "N.D.Gems";
+          const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${main.total}&cu=INR`;
+        
+          // Generate QR code as base64
+          const qrBase64 = await QRCode.toDataURL(upiUrl, { width: 200 });
         const printWindow = window.open('', '_blank');
             
             const printHTML = `
@@ -441,7 +456,7 @@ const handlePrintA4 = async (billNo) => {
                     border-bottom: 2px solid #374151;
                     background: #f3f4f6;
                     font-weight: bold;
-                    font-size: 14px;
+                    font-size: 12px;
                   }
                   
                   .amount-words {
@@ -472,13 +487,42 @@ const handlePrintA4 = async (billNo) => {
                     font-size: 10px;
                   }
                   
-                  .thank-you {
-                    font-size: 16px;
-                    font-weight: bold;
-                    color: #2563eb;
-                    margin-bottom: 10px;
-                  }
-                  
+      .bottom-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 20px;
+}
+
+.qr-section {
+  flex: 0 0 220px;
+  text-align: center;
+}
+
+.qr-section img {
+  width: 150px;
+  height: 150px;
+}
+
+.qr-caption {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #374151;
+}
+
+.thankyou-section {
+  flex: 1;
+  margin-left: 20px;
+  font-size: 11px;
+  color: #6b7280;
+}
+.thank-you {
+  font-size: 16px;
+  font-weight: bold;
+  color: #2563eb;
+  margin-bottom: 10px;
+}
+            
                   @media print {
                     .invoice-container {
                       max-width: none;
@@ -560,7 +604,7 @@ const handlePrintA4 = async (billNo) => {
                         <tr>
                           <td>
                             <div class="item-name">${item.style_number}</div>
-                            <div class="item-size">Product ID: ${item.name}</div>
+                            <div class="item-size">Product ID: ${item.style_name}</div>
                           </td>
                           <td style="text-align: center;">${item.size}</td>
                           <td style="text-align: right;">₹${item.price}</td>
@@ -588,12 +632,9 @@ const handlePrintA4 = async (billNo) => {
                         <td class="amount">₹${main.discounted_subtotal}</td>
                       </tr>
                       ` : ''}
-                      <tr>
-                        <td class="label">GST (18%):</td>
-                        <td class="amount">₹${main.gst_amount}</td>
-                      </tr>
+                      
                       <tr class="total-row">
-                        <td class="label">Total Amount:</td>
+                        <td class="label">Total Amt(Inc 5% GST):</td>
                         <td class="amount">₹${main.total}</td>
                       </tr>
                     </table>
@@ -602,20 +643,23 @@ const handlePrintA4 = async (billNo) => {
                   <!-- Amount in Words -->
                   <div class="amount-words">
                     <div class="amount-words-title">Amount in Words:</div>
-                    <div class="amount-words-text">${toWords(main.total)}</div>
+                    <div class="amount-words-text">${toSentenceCase(toWords(main.total))}</div>
                   </div>
-                  
-                  <!-- Footer -->
-                  <div class="footer">
-                    <div class="thank-you">Thank You for Your Business!</div>
-                    <div>
-                      This is a computer generated invoice and does not require signature.<br>
-                      For any queries, please contact us at info@yourstore.com or +91 98765 43210
-                    </div>
-                    ${main.discount_mount > 0 ? `<div style="color: #16a34a; font-weight: bold; margin-top: 10px;">You saved ₹${main.discount_amount} on this purchase!</div>` : ''}
-                  </div>
-                </div>
-                
+                  <div class="bottom-section">
+  <div class="qr-section">
+    <img src="${qrBase64}" alt="UPI QR Code" />
+    <div class="qr-caption">Scan & Pay via UPI<br>Amount: ₹${main.total}</div>
+  </div>
+  <div class="thankyou-section">
+    <div class="thank-you">Thank You for Your Business!</div>
+    <div class="thankyou-note">
+      This is a computer generated invoice and does not require signature.<br>
+      For any queries, please contact us at info@yourstore.com or +91 98765 43210
+    </div>
+    ${main.discount_amount > 0 ? `<div style="color: #16a34a; font-weight: bold; margin-top: 10px;">You saved ₹${main.discount_amount} on this purchase!</div>` : ''}
+  </div>
+</div>
+
                 <script>
                   window.onload = function() {
                     window.print();
@@ -650,7 +694,14 @@ const handlePrint = async (billNo) => {
 
     const receiptContent = generateReceiptContent2(data.bill);
     const printWindow = window.open('', '_blank');
+      // Totals from your logic
+        const total = parseFloat(data.bill.main.total).toFixed(2);
+        const upiId = "8788963719@axl";   // Replace with your UPI ID
+        const payeeName = "N.D.Gems";
+        const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${total}&cu=INR`;
     
+      // Generate QR code as base64
+      const qrBase64 = await QRCode.toDataURL(upiUrl, { width: 200 });
     
     const printHTML = `
       <!DOCTYPE html>
@@ -679,8 +730,8 @@ const handlePrint = async (billNo) => {
             margin-bottom: 8px;
           }
           .logo img {
-            max-width: 60mm;
-            max-height: 20mm;
+            max-width: 80mm;
+            max-height: 40mm;
             height: auto;
             width: auto;
           }
@@ -709,6 +760,10 @@ const handlePrint = async (billNo) => {
           <img src="${logoBase64}" alt="Store Logo" />
         </div>
         <div class="receipt">${receiptContent}</div>
+        <div class="qr">
+        <img src="${qrBase64}" alt="UPI QR" />
+        <div class="qr-caption">Scan & Pay via UPI<br>Amount: ₹${total}</div>
+      </div>
         <script>
           window.onload = function() {
             window.print();

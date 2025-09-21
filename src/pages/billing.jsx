@@ -5,6 +5,7 @@ import { toWords } from 'number-to-words';
 import { BrowserMultiFormatReader } from "@zxing/library";
 import BarcodeScanner from "./barcodeScanner";
 import { logoBase64 } from '../assets/logobase64';
+import QRCode from "qrcode";
 
 const Billing = () => {
  
@@ -130,17 +131,17 @@ const Billing = () => {
         setBillItems(updatedItems);
       } else {
         // Add new item
-        const cost_price = productData.mrp ? (parseFloat(productData.mrp)/1.05).toFixed(2) : 0; 
+        //const cost_price = productData.mrp ? (parseFloat(productData.mrp)/1.05).toFixed(2) : 0; 
         const newItem = {
           id: Date.now(),
           productId,
           name: productData.style_number,
           size: sizeLabel,
-          price:parseFloat(cost_price),
+          price:parseFloat(productData.mrp)||0,
           quantity: 1,
-          total: parseFloat(cost_price)
+          total: parseFloat(productData.mrp)||0
         };
-        console.log(cost_price,newItem);
+        //console.log(cost_price,newItem);
         setBillItems([...billItems, newItem]);
       }
 
@@ -187,15 +188,16 @@ const Billing = () => {
     
     if (subtotal >= 5000) {
       discountPercentage = 15;
-    } else if (subtotal >= 2501) {
+    } else if (subtotal >= 2001) {
       discountPercentage = 10;
-    } else if (subtotal >= 2000) {
+    } else if (subtotal >= 1) {
       discountPercentage = 5;
     }
     
     discountAmount = (subtotal * discountPercentage) / 100;
     const discountedSubtotal = subtotal - discountAmount;
-    const gstAmount = (discountedSubtotal / 105).toFixed(2); // 5% GST included in total
+    //const gstAmount = (discountedSubtotal / 105).toFixed(2); // 5% GST included in total
+    const gstAmount=0;//changes made to remove from bill
     const total = Math.round(discountedSubtotal);
     
     return { 
@@ -294,11 +296,17 @@ const Billing = () => {
     };
 
   // Print receipt function
-  const printReceipt = () => {
+  const printReceipt = async() => {
     const receiptContent = generateReceiptContent();
     const printWindow = window.open('', '_blank');
-    
-    
+      // Totals from your logic
+    const total = calculateTotals().total;
+    const upiId = "8788963719@axl";   // Replace with your UPI ID
+    const payeeName = "N.D.Gems";
+    const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${total.toFixed(2)}&cu=INR`;
+
+  // Generate QR code as base64
+  const qrBase64 = await QRCode.toDataURL(upiUrl, { width: 200 });
     const printHTML = `
       <!DOCTYPE html>
       <html>
@@ -334,6 +342,18 @@ const Billing = () => {
           .receipt {
             white-space: pre-line;
           }
+            .qr {
+          text-align: center;
+          margin-top: 8px;
+        }
+        .qr img {
+          width: 150px;
+          height: 150px;
+        }
+        .qr-caption {
+          margin-top: 4px;
+          font-size: 11px;
+        }
           @media print {
             body {
               width: 72mm;
@@ -356,6 +376,10 @@ const Billing = () => {
           <img src="${logoBase64}" alt="Store Logo" />
         </div>
         <div class="receipt">${receiptContent}</div>
+        <div class="qr">
+        <img src="${qrBase64}" alt="UPI QR" />
+        <div class="qr-caption">Scan & Pay via UPI<br>Amount: ₹${total.toFixed(2)}</div>
+      </div>
         <script>
           window.onload = function() {
             window.print();
@@ -372,8 +396,15 @@ const Billing = () => {
     printWindow.document.close();
   };
 
-const printA4Receipt = () => {
+const printA4Receipt = async() => {
     const { subtotal, discountPercentage, discountAmount, discountedSubtotal, gstAmount, total } = calculateTotals();
+    
+  const upiId = "8788963719@axl";   // Replace with your UPI ID
+  const payeeName = "N.D.Gems";
+  const upiUrl = `upi://pay?pa=${upiId}&pn=${encodeURIComponent(payeeName)}&am=${total.toFixed(2)}&cu=INR`;
+
+  // Generate QR code as base64
+  const qrBase64 = await QRCode.toDataURL(upiUrl, { width: 200 });
     const now = new Date();
     const dateStr = now.toLocaleDateString('en-IN', { 
       year: 'numeric', month: 'long', day: 'numeric' 
@@ -435,6 +466,7 @@ const printA4Receipt = () => {
                         .logo-section img {
                           max-width: 120px;
                           max-height: 60px;
+                          
                           margin-bottom: 10px;
                         }
                         
@@ -602,21 +634,36 @@ const printA4Receipt = () => {
                         }
                         
                         .footer {
-                          margin-top: 30px;
-                          padding-top: 20px;
+                          margin-top: 10px;
+                          padding-top: 10px;
                           border-top: 1px solid #e5e7eb;
-                          text-align: center;
+                          text-align: right;
                           color: #6b7280;
                           font-size: 10px;
                         }
-                        
-                        .thank-you {
-                          font-size: 16px;
-                          font-weight: bold;
-                          color: #2563eb;
-                          margin-bottom: 10px;
-                        }
-                        
+                      
+      .bottom-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 20px;
+}
+
+.qr-section {
+  flex: 0 0 220px;
+  text-align: center;
+}
+
+.qr-section img {
+  width: 150px;
+  height: 150px;
+}
+
+.qr-caption {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #374151;
+}
                         @media print {
                           .invoice-container {
                             max-width: none;
@@ -726,12 +773,9 @@ const printA4Receipt = () => {
                 <td class="amount">₹${discountedSubtotal.toFixed(2)}</td>
               </tr>
               ` : ''}
-              <tr>
-                <td class="label">GST (18%):</td>
-                <td class="amount">₹${gstAmount}</td>
-              </tr>
+             
               <tr class="total-row">
-                <td class="label">Total Amount:</td>
+                <td class="label">Total Amt(Inc 5% GST):</td>
                 <td class="amount">₹${total.toFixed(2)}</td>
               </tr>
             </table>
@@ -740,19 +784,22 @@ const printA4Receipt = () => {
           <!-- Amount in Words -->
           <div class="amount-words">
             <div class="amount-words-title">Amount in Words:</div>
-            <div class="amount-words-text">${toWords(total)}</div>
+            <div class="amount-words-text">${toSentenceCase(toWords(total))}</div>
           </div>
-          
-          <!-- Footer -->
-          <div class="footer">
-            <div class="thank-you">Thank You for Your Business!</div>
-            <div>
-              This is a computer generated invoice and does not require signature.<br>
-              For any queries, please contact us at info@yourstore.com or +91 98765 43210
-            </div>
-            ${discountAmount > 0 ? `<div style="color: #16a34a; font-weight: bold; margin-top: 10px;">You saved ₹${discountAmount.toFixed(2)} on this purchase!</div>` : ''}
-          </div>
-        </div>
+           <div class="bottom-section">
+       <div class="qr-section">
+    <img src="${qrBase64}" alt="UPI QR Code" />
+    <div class="qr-caption">Scan & Pay via UPI<br>Amount: ₹${total}</div>
+  </div>
+  <div class="thankyou-section">
+    <div class="thank-you">Thank You for Your Business!</div>
+    <div class="thankyou-note">
+      This is a computer generated invoice and does not require signature.<br>
+      For any queries, please contact us at info@yourstore.com or +91 98765 43210
+    </div>
+    ${discountAmount > 0 ? `<div style="color: #16a34a; font-weight: bold; margin-top: 10px;">You saved ₹${discountAmount} on this purchase!</div>` : ''}
+  </div>
+</div>
         
         <script>
           window.onload = function() {
@@ -837,6 +884,69 @@ const validateCustomerData = () => {
         
         if (shouldPrint) {
           printReceipt();
+          //printA4Receipt();
+        }
+        
+        setBillItems([]);
+        setCustomerDetails({ name: '', address: '', mobile: '', gstNo: '' });
+      } else {
+        throw new Error('Failed to save bill');
+      }
+    } catch (err) {
+      setError('Error saving bill: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const saveBillA4 = async (shouldPrint = true) => {
+    if (billItems.length === 0) {
+      setError('Cannot save empty bill');
+      return;
+    }
+// NEW VALIDATION CODE ADDED:
+  const validationErrors = validateCustomerData();
+  if (validationErrors.length > 0) {
+    setError('Please fix the following errors:\n' + validationErrors.join('\n'));
+    return;
+  }
+    setLoading(true);
+   const { subtotal, discountPercentage, discountAmount, discountedSubtotal, gstAmount, total } = calculateTotals();
+
+    const billData = {
+          customerDetails,
+          items: billItems,
+          paymentMode,
+          subtotal,
+          discountPercentage,
+          discountAmount,
+          discountedSubtotal,
+          gstAmount,
+          total,
+          totalInWords: toWords(total),
+          date: new Date().toISOString()
+        };
+        console.log('Saving bill data:', billData);
+    console.log('Saving bill data:', billData);
+    try {
+      const response = await fetch(`${BASE_URL}/api/bills`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(billData)
+      });
+
+      if (response.ok) {
+         alert('Bill saved successfully!');
+        console.log('Bill saved successfully:', response);
+        const responseData = await response.json();
+        console.log('Response data:', responseData);
+        setBillnofinal(responseData.bill.main.bill_no);
+        shouldPrint=true
+        
+        if (shouldPrint) {
+          //printReceipt();
+          printA4Receipt();
         }
         
         setBillItems([]);
@@ -1066,7 +1176,7 @@ function toSentenceCase(str) {
                              </tr>
                              )}
                              <tr className="bg-blue-100 font-bold text-base sm:text-lg">
-                               <td colSpan="4" className="border border-gray-300 px-2 sm:px-4 py-2 text-right">Total (Inclusive of 5% GST ₹ {gstAmount}):</td>
+                               <td colSpan="4" className="border border-gray-300 px-2 sm:px-4 py-2 text-right">Total (Inclusive of 5% GST):</td>
                                <td className="border border-gray-300 px-2 sm:px-4 py-2 text-right">₹{total.toFixed(2)}</td>
                                <td className="border border-gray-300"></td>
                              </tr>
@@ -1153,13 +1263,13 @@ function toSentenceCase(str) {
                        {loading ? 'Saving...' : 'Save Bill'}
                      </button>
                      <button
-                       onClick={() => saveBill(true)}
+                       onClick={() => saveBillA4(true)}
                        disabled={loading || billItems.length === 0}
                        className="px-4 sm:px-6 py-2 sm:py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base font-semibold"
                      >
                        <Save className="w-4 h-4 sm:w-5 sm:h-5" />
                        <Printer className="w-3 h-3 sm:w-4 sm:h-4" />
-                       {loading ? 'Processing...' : 'Save & Print'}
+                       {loading ? 'Processing...' : 'Save & Print A4'}
                      </button>
                    </div>
                  </div>
